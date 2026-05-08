@@ -115,6 +115,94 @@ type ReportResponse = {
   report: Report
 }
 
+type PassingNetworkNode = {
+  name: string
+  display_name?: string
+  position_abbr?: string
+  position_name?: string
+  x?: number
+  y?: number
+  completed_passes: number
+  passes_received: number
+  outgoing_weight: number
+  incoming_weight: number
+  unique_connections: number
+  weighted_degree: number
+  betweenness: number
+  event_count?: number
+  has_location?: boolean
+}
+
+type PassingNetworkEdge = {
+  source: string
+  target: string
+  weight: number
+}
+
+type PassingNetworkData = {
+  summary?: string
+  metrics?: Record<string, number>
+  central_players?: string[]
+  top_connections?: PassingNetworkEdge[]
+  nodes?: PassingNetworkNode[]
+  edges?: PassingNetworkEdge[]
+  notes?: string[]
+}
+
+type PassingNetworkLayoutNode = PassingNetworkNode & {
+  x: number
+  y: number
+  radius: number
+  isCentral: boolean
+}
+
+type PassingNetworkLayoutEdge = PassingNetworkEdge & {
+  x1: number
+  y1: number
+  x2: number
+  y2: number
+  width: number
+}
+
+type DefensiveSpacingAction = {
+  team: string
+  type: string
+  x: number
+  y: number
+}
+
+type DefensiveSpacingGap = {
+  axis: 'x' | 'y'
+  team: string
+  gaps: Array<{
+    start: number
+    end: number
+    gap: number
+  }>
+}
+
+type DefensiveSpacingData = {
+  summary?: string
+  metrics?: Record<string, number | string>
+  team_breakdown?: Array<{
+    team: string
+    defensive_actions: number
+    share: number
+  }>
+  gaps?: DefensiveSpacingGap[]
+  actions?: DefensiveSpacingAction[]
+  notes?: string[]
+}
+
+type DefensiveSpacingHeatCell = {
+  x: number
+  y: number
+  width: number
+  height: number
+  count: number
+  opacity: number
+}
+
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') ?? 'http://localhost:8000'
 
 function competitionKey(competition: Competition) {
@@ -124,6 +212,167 @@ function competitionKey(competition: Competition) {
 function formatMatchLabel(match: Match) {
   const when = match.match_date || match.kick_off || 'Date unavailable'
   return `${match.home_team} vs ${match.away_team} · ${when}`
+}
+
+function formatSpacingZone(cell: { x: number; y: number; width: number; height: number }) {
+  const xStart = Math.round(cell.x)
+  const xEnd = Math.round(cell.x + cell.width)
+  const yStart = Math.round(cell.y)
+  const yEnd = Math.round(cell.y + cell.height)
+  return `Zone ${xStart}-${xEnd} / ${yStart}-${yEnd}`
+}
+
+function buildPassingNetworkLayout(network: PassingNetworkData | undefined | null) {
+  if (!network?.nodes?.length || !network?.edges?.length) {
+    return null
+  }
+
+  const nodes = [...network.nodes].sort(
+    (left, right) => right.weighted_degree - left.weighted_degree || right.completed_passes - left.completed_passes,
+  )
+  const maxWeightedDegree = Math.max(...nodes.map((node) => node.weighted_degree), 1)
+  const maxEdgeWeight = Math.max(...network.edges.map((edge) => edge.weight), 1)
+  const hasPitchCoordinates = nodes.every((node) => typeof node.x === 'number' && typeof node.y === 'number')
+  const centerX = 60
+  const centerY = 40
+  const ringRadius = nodes.length > 1 ? 26 : 0
+  const centralPlayers = new Set(network.central_players ?? [])
+  const primaryNode = nodes[0]
+  const positionByName = new Map<string, { x: number; y: number }>()
+
+  if (hasPitchCoordinates) {
+    nodes.forEach((node) => {
+      positionByName.set(node.name, {
+        x: node.x ?? centerX,
+        y: node.y ?? centerY,
+      })
+    })
+  } else {
+    nodes.forEach((node, index) => {
+      if (index === 0) {
+        positionByName.set(node.name, { x: centerX, y: centerY })
+        return
+      }
+
+      const angle = (2 * Math.PI * (index - 1)) / Math.max(nodes.length - 1, 1) - Math.PI / 2
+      positionByName.set(node.name, {
+        x: centerX + ringRadius * Math.cos(angle),
+        y: centerY + ringRadius * Math.sin(angle),
+      })
+    })
+  }
+
+  const layoutNodes: PassingNetworkLayoutNode[] = nodes.map((node) => {
+    const position = positionByName.get(node.name) ?? { x: centerX, y: centerY }
+    return {
+      ...node,
+      x: position.x,
+      y: position.y,
+      radius: 3 + (node.weighted_degree / maxWeightedDegree) * 4.5,
+      isCentral: centralPlayers.has(node.name) || node.name === primaryNode.name,
+    }
+  })
+
+  const layoutEdges: PassingNetworkLayoutEdge[] = network.edges
+    .map((edge) => {
+      const source = positionByName.get(edge.source)
+      const target = positionByName.get(edge.target)
+      if (!source || !target) {
+        return null
+      }
+
+      return {
+        ...edge,
+        x1: source.x,
+        y1: source.y,
+        x2: target.x,
+        y2: target.y,
+        width: 0.8 + (edge.weight / maxEdgeWeight) * 2.8,
+      }
+    })
+    .filter((edge): edge is PassingNetworkLayoutEdge => edge !== null)
+    .sort((left, right) => right.width - left.width)
+
+  return {
+    nodes: layoutNodes,
+    edges: layoutEdges,
+    summary: network.summary || 'Passing network built from the backend analytics layer.',
+    topConnections: network.top_connections?.length ? network.top_connections : network.edges.slice(0, 5),
+    centralPlayers: network.central_players ?? layoutNodes.slice(0, 4).map((node) => node.name),
+  }
+}
+
+function buildDefensiveSpacingLayout(data: DefensiveSpacingData | undefined | null) {
+  if (!data?.actions?.length) {
+    return null
+  }
+
+  const actions = [...data.actions]
+  const maxActions = Math.max(actions.length, 1)
+  const centroidX = Number(data.metrics?.centroid_x ?? 60)
+  const centroidY = Number(data.metrics?.centroid_y ?? 40)
+  const compactness = Number(data.metrics?.compactness ?? 0.5)
+  const lineStretch = Number(data.metrics?.line_stretch ?? 0.5)
+  const cols = 6
+  const rows = 4
+  const cellWidth = 120 / cols
+  const cellHeight = 80 / rows
+  const binCounts = new Map<string, number>()
+
+  actions.forEach((action) => {
+    const col = Math.min(cols - 1, Math.max(0, Math.floor(action.x / cellWidth)))
+    const row = Math.min(rows - 1, Math.max(0, Math.floor(action.y / cellHeight)))
+    const key = `${col}:${row}`
+    binCounts.set(key, (binCounts.get(key) ?? 0) + 1)
+  })
+
+  const maxBinCount = Math.max(...binCounts.values(), 1)
+  const heatmap: DefensiveSpacingHeatCell[] = []
+  for (let row = 0; row < rows; row += 1) {
+    for (let col = 0; col < cols; col += 1) {
+      const count = binCounts.get(`${col}:${row}`) ?? 0
+      if (!count) {
+        continue
+      }
+      heatmap.push({
+        x: col * cellWidth,
+        y: row * cellHeight,
+        width: cellWidth,
+        height: cellHeight,
+        count,
+        opacity: 0.12 + (count / maxBinCount) * 0.68,
+      })
+    }
+  }
+
+  const hotZones = [...heatmap]
+    .sort((left, right) => right.count - left.count)
+    .slice(0, 3)
+
+  const gapBands = (data.gaps ?? []).flatMap((gap) =>
+    gap.gaps.slice(0, 2).map((item) => ({
+      axis: gap.axis,
+      start: item.start,
+      end: item.end,
+      team: gap.team,
+      gap: item.gap,
+    })),
+  )
+
+  return {
+    centroid: {
+      x: centroidX,
+      y: centroidY,
+    },
+    gapBands,
+    summary: data.summary || 'Defensive spacing from the backend analytics layer.',
+    compactness,
+    lineStretch,
+    teamBreakdown: data.team_breakdown ?? [],
+    totalActions: maxActions,
+    heatmap,
+    hotZones,
+  }
 }
 
 function App() {
@@ -293,6 +542,14 @@ function App() {
   const insights = report?.insights ?? []
   const narrativeNotes = report?.notes ?? []
   const reportFocusTeam = selectedReportTeam || selectedMatch?.home_team || 'Home Team'
+  const passingNetwork = useMemo(
+    () => buildPassingNetworkLayout(report?.analytics?.passing_network as PassingNetworkData | undefined),
+    [report],
+  )
+  const defensiveSpacing = useMemo(
+    () => buildDefensiveSpacingLayout(report?.analytics?.defensive_spacing as DefensiveSpacingData | undefined),
+    [report],
+  )
   const summaryCards = summary
     ? [
         {
@@ -612,6 +869,191 @@ function App() {
             </div>
 
             <aside className="report-sidebar">
+              <div className="subpanel">
+                <h3>Passing Network</h3>
+                {passingNetwork ? (
+                  <div className="network-panel">
+                    <p className="network-summary">{passingNetwork.summary}</p>
+                    <svg
+                      className="network-svg"
+                      viewBox="0 0 120 80"
+                      role="img"
+                      aria-label="Passing network graph"
+                    >
+                      <defs>
+                        <linearGradient id="edgeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" stopColor="#f5b84a" />
+                          <stop offset="100%" stopColor="#ef7d57" />
+                        </linearGradient>
+                      </defs>
+                      <rect x="0" y="0" width="120" height="80" rx="3" className="pitch-surface" />
+                      <line x1="60" y1="0" x2="60" y2="80" className="pitch-line" />
+                      <circle cx="60" cy="40" r="10" className="pitch-circle" />
+                      <line x1="18" y1="18" x2="18" y2="62" className="pitch-box" />
+                      <line x1="102" y1="18" x2="102" y2="62" className="pitch-box" />
+                      <line x1="18" y1="18" x2="0" y2="18" className="pitch-box" />
+                      <line x1="18" y1="62" x2="0" y2="62" className="pitch-box" />
+                      <line x1="102" y1="18" x2="120" y2="18" className="pitch-box" />
+                      <line x1="102" y1="62" x2="120" y2="62" className="pitch-box" />
+                      {passingNetwork.edges.map((edge, index) => (
+                        <line
+                          key={`${edge.source}-${edge.target}-${index}`}
+                          x1={edge.x1}
+                          y1={edge.y1}
+                          x2={edge.x2}
+                          y2={edge.y2}
+                          className="network-edge"
+                          style={{ strokeWidth: edge.width }}
+                        />
+                      ))}
+                      {passingNetwork.nodes.map((node) => (
+                        <g key={node.name} className={node.isCentral ? 'network-node central' : 'network-node'}>
+                          <circle
+                            cx={node.x}
+                            cy={node.y}
+                            r={node.radius}
+                            className={node.isCentral ? 'network-node-core' : 'network-node-shell'}
+                          />
+                          <text x={node.x} y={node.y + node.radius + 3} textAnchor="middle">
+                            {node.display_name || node.position_abbr || node.name}
+                          </text>
+                          <title>{node.name}</title>
+                        </g>
+                      ))}
+                    </svg>
+
+                    <div className="network-meta">
+                      <div>
+                        <span className="label">Central players</span>
+                        <strong>
+                          {passingNetwork.centralPlayers.length > 0
+                            ? passingNetwork.centralPlayers.slice(0, 4).join(', ')
+                            : 'No clear hub'}
+                        </strong>
+                      </div>
+                      <div>
+                        <span className="label">Top connections</span>
+                        <ul className="network-connection-list">
+                          {passingNetwork.topConnections.slice(0, 3).map((edge) => (
+                            <li key={`${edge.source}-${edge.target}`}>
+                              {edge.source} to {edge.target} ({edge.weight})
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="empty-state">Generate a report to see the passing network visualisation.</p>
+                )}
+              </div>
+
+              <div className="subpanel">
+                <h3>Defensive Spacing</h3>
+                {defensiveSpacing ? (
+                  <div className="spacing-panel">
+                    <p className="network-summary">{defensiveSpacing.summary}</p>
+                    <div className="spacing-callouts">
+                      <span>
+                        Strongest zone:{' '}
+                        {defensiveSpacing.hotZones[0]
+                          ? formatSpacingZone(defensiveSpacing.hotZones[0])
+                          : 'N/A'}
+                      </span>
+                      <span>Compactness {defensiveSpacing.compactness.toFixed(2)}</span>
+                      <span>Stretch {defensiveSpacing.lineStretch.toFixed(2)}</span>
+                    </div>
+                    <svg
+                      className="spacing-svg"
+                      viewBox="0 0 120 80"
+                      role="img"
+                      aria-label="Defensive spacing visualisation"
+                    >
+                      <rect x="0" y="0" width="120" height="80" rx="3" className="pitch-surface pitch-surface-alt" />
+                      <line x1="60" y1="0" x2="60" y2="80" className="pitch-line" />
+                      <circle cx="60" cy="40" r="10" className="pitch-circle" />
+                      <line x1="18" y1="18" x2="18" y2="62" className="pitch-box" />
+                      <line x1="102" y1="18" x2="102" y2="62" className="pitch-box" />
+                      {defensiveSpacing.gapBands.map((band, index) =>
+                        band.axis === 'x' ? (
+                          <rect
+                            key={`gap-x-${index}`}
+                            x={band.start}
+                            y={0}
+                            width={Math.max(band.gap, 1)}
+                            height={80}
+                            className="spacing-gap-x"
+                          />
+                        ) : (
+                          <rect
+                            key={`gap-y-${index}`}
+                            x={0}
+                            y={band.start}
+                            width={120}
+                            height={Math.max(band.gap, 1)}
+                            className="spacing-gap-y"
+                          />
+                        ),
+                      )}
+                      {defensiveSpacing.heatmap.map((cell, index) => (
+                        <rect
+                          key={`heat-${index}`}
+                          x={cell.x}
+                          y={cell.y}
+                          width={cell.width}
+                          height={cell.height}
+                          className="spacing-heat-cell"
+                          style={{ opacity: cell.opacity }}
+                        />
+                      ))}
+                      <circle
+                        cx={defensiveSpacing.centroid.x}
+                        cy={defensiveSpacing.centroid.y}
+                        r="2.4"
+                        className="spacing-centroid"
+                      />
+                      {defensiveSpacing.hotZones.map((zone, index) => (
+                        <rect
+                          key={`hot-${index}`}
+                          x={zone.x + 1}
+                          y={zone.y + 1}
+                          width={zone.width - 2}
+                          height={zone.height - 2}
+                          className="spacing-hot-zone"
+                        />
+                      ))}
+                    </svg>
+
+                    <div className="network-meta">
+                      <div>
+                        <span className="label">Compactness</span>
+                        <strong>{defensiveSpacing.compactness.toFixed(2)}</strong>
+                      </div>
+                      <div>
+                        <span className="label">Line stretch</span>
+                        <strong>{defensiveSpacing.lineStretch.toFixed(2)}</strong>
+                      </div>
+                      <div>
+                        <span className="label">Defensive actions</span>
+                        <strong>{defensiveSpacing.totalActions}</strong>
+                      </div>
+                      <div>
+                        <span className="label">Top zones</span>
+                        <ul className="network-connection-list">
+                          {defensiveSpacing.hotZones.slice(0, 3).map((zone, index) => (
+                            <li key={`zone-${index}`}>
+                              Zone {index + 1}: {zone.count} actions
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="empty-state">Generate a report to see the defensive spacing visualisation.</p>
+                )}
+              </div>
+
               <div className="subpanel">
                 <h3>Visualisation Hooks</h3>
                 <ul>

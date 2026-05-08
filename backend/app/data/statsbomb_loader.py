@@ -137,3 +137,32 @@ def load_match_events(match_id: str) -> list[dict[str, Any]]:
     if isinstance(events, pd.DataFrame):
         return events.fillna("").to_dict(orient="records")
     return list(events)
+
+
+@lru_cache(maxsize=64)
+def load_match_lineups(match_id: str) -> list[dict[str, Any]]:
+    try:
+        lineups = sb.lineups(match_id=match_id)
+    except Exception:
+        return []
+
+    if isinstance(lineups, pd.DataFrame):
+        return lineups.fillna("").to_dict(orient="records")
+
+    if isinstance(lineups, dict):
+        records: list[dict[str, Any]] = []
+        for team_name, team_value in lineups.items():
+            if isinstance(team_value, pd.DataFrame):
+                team_records = team_value.fillna("").to_dict(orient="records")
+                for record in team_records:
+                    record.setdefault("team_name", team_name)
+                records.extend(team_records)
+            elif isinstance(team_value, list):
+                for record in team_value:
+                    if isinstance(record, dict):
+                        record = dict(record)
+                        record.setdefault("team_name", team_name)
+                        records.append(record)
+        return records
+
+    return list(lineups)

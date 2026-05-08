@@ -6,6 +6,7 @@ from ..analytics.defensive_spacing import analyze_defensive_spacing
 from ..analytics.passing_network import analyze_passing_network
 from ..analytics.player_impact import analyze_player_impact
 from ..analytics.tempo import analyze_possession_tempo
+from ..data.statsbomb_loader import load_match_lineups
 from ..domain import MatchContext, ReportSection, TacticalReport
 from ..insights.transformer import build_actionable_insights, build_llm_insight_payload
 from ..summary.matcher import build_match_summary
@@ -18,12 +19,17 @@ def generate_tactical_report(
 ) -> TacticalReport:
     event_list = list(events or [])
     focus_team = match.focus_team or match.home_team
+    lineups = load_match_lineups(match.match_id)
 
     analytics = {
-        "passing_network": analyze_passing_network(event_list),
-        "defensive_spacing": analyze_defensive_spacing(event_list),
-        "player_impact": analyze_player_impact(event_list),
-        "tempo": analyze_possession_tempo(event_list),
+        "passing_network": analyze_passing_network(
+            event_list,
+            focus_team=focus_team,
+            lineups=lineups,
+        ),
+        "defensive_spacing": analyze_defensive_spacing(event_list, focus_team=focus_team),
+        "player_impact": analyze_player_impact(event_list, focus_team=focus_team),
+        "tempo": analyze_possession_tempo(event_list, focus_team=focus_team),
     }
     match_summary = build_match_summary(match.to_dict(), analytics)
     summary_dict = match_summary.to_dict()
@@ -33,12 +39,15 @@ def generate_tactical_report(
     sections = [
         ReportSection(
             title="Match Overview",
-            summary="High-level context for the fixture and its main tactical shape.",
+            summary=(
+                f"Selected team: {focus_team}. "
+                f"{summary_dict.get('themes', ['High-level fixture context.'])[0]}"
+            ),
             bullets=[
                 f"Competition: {match.competition}",
                 f"Season: {match.season}",
                 f"Report focus: {focus_team}",
-                "This section will summarize the game state and headline patterns for the selected team.",
+                "This overview now reflects the selected team only.",
             ],
         ),
         ReportSection(

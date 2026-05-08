@@ -95,25 +95,36 @@ def _largest_coordinate_gaps(values: list[float]) -> list[dict[str, Any]]:
     return gaps[:3]
 
 
-def analyze_defensive_spacing(events: Iterable[dict[str, Any]] | None = None) -> dict[str, Any]:
+def analyze_defensive_spacing(
+    events: Iterable[dict[str, Any]] | None = None,
+    focus_team: str | None = None,
+) -> dict[str, Any]:
     event_list = list(events or [])
     defensive_events = [
         event
         for event in event_list
-        if _event_type(event) in DEFENSIVE_EVENT_TYPES and _location(event) is not None
+        if _event_type(event) in DEFENSIVE_EVENT_TYPES
+        and _location(event) is not None
+        and (not focus_team or _team_name(event) == focus_team)
     ]
 
     if not defensive_events:
         return {
-            "summary": "No defensive actions with usable locations were available.",
+            "summary": (
+                f"No defensive actions with usable locations were available for {focus_team}."
+                if focus_team
+                else "No defensive actions with usable locations were available."
+            ),
             "metrics": {
-                "event_count": len(event_list),
+                "event_count": len(defensive_events),
                 "defensive_action_count": 0,
                 "line_stretch": 0.0,
                 "compactness": 0.0,
+                "focus_team": focus_team or "",
             },
             "team_breakdown": [],
             "gaps": [],
+            "actions": [],
             "notes": [
                 "Add defensive action locations to calculate spatial compactness and line stretch.",
             ],
@@ -131,6 +142,15 @@ def analyze_defensive_spacing(events: Iterable[dict[str, Any]] | None = None) ->
 
     positions = [_location(event) for event in team_defensive_events]
     positions = [position for position in positions if position is not None]
+    actions = [
+        {
+            "team": _team_name(event) or dominant_team,
+            "type": _event_type(event),
+            "x": round(position[0], 2),
+            "y": round(position[1], 2),
+        }
+        for event, position in zip(team_defensive_events, positions)
+    ]
 
     xs = [point[0] for point in positions]
     ys = [point[1] for point in positions]
@@ -178,16 +198,18 @@ def analyze_defensive_spacing(events: Iterable[dict[str, Any]] | None = None) ->
     return {
         "summary": summary,
         "metrics": {
-            "event_count": len(event_list),
+            "event_count": len(defensive_events),
             "defensive_action_count": len(defensive_events),
             "dominant_team_defensive_count": dominant_count,
             "line_stretch": line_stretch,
             "compactness": compactness,
             "centroid_x": centroid_x,
             "centroid_y": centroid_y,
+            "focus_team": focus_team or dominant_team,
         },
         "team_breakdown": team_breakdown,
         "gaps": gaps,
+        "actions": actions,
         "notes": [
             "Compactness is derived from the average pairwise distance between defensive actions.",
             "Line stretch combines the vertical and horizontal spread of defensive actions.",

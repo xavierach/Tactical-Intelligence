@@ -80,14 +80,21 @@ def _progression(first_x: float | None, last_x: float | None) -> float:
     return max(last_x - first_x, 0.0)
 
 
-def analyze_possession_tempo(events: Iterable[dict[str, Any]] | None = None) -> dict[str, Any]:
+def analyze_possession_tempo(
+    events: Iterable[dict[str, Any]] | None = None,
+    focus_team: str | None = None,
+) -> dict[str, Any]:
     event_list = list(events or [])
 
     possessions: dict[tuple[str, int], list[dict[str, Any]]] = defaultdict(list)
     for index, event in enumerate(event_list):
         team = _team_name(event) or "Unknown Team"
+        if focus_team and team != focus_team:
+            continue
         possession_id = _possession_id(event, index)
         possessions[(team, possession_id)].append(event)
+
+    team_event_count = sum(len(possession_events) for possession_events in possessions.values())
 
     possession_rows: list[dict[str, Any]] = []
     team_totals: dict[str, dict[str, float]] = defaultdict(
@@ -141,13 +148,18 @@ def analyze_possession_tempo(events: Iterable[dict[str, Any]] | None = None) -> 
 
     if not possession_rows:
         return {
-            "summary": "No possessions with usable tempo information were available.",
+            "summary": (
+                f"No possessions with usable tempo information were available for {focus_team}."
+                if focus_team
+                else "No possessions with usable tempo information were available."
+            ),
             "metrics": {
-                "event_count": len(event_list),
+                "event_count": 0,
                 "avg_sequence_length": 0.0,
                 "transition_speed": 0.0,
                 "avg_possession_duration": 0.0,
                 "possession_count": 0,
+                "focus_team": focus_team or "",
             },
             "team_breakdown": [],
             "possessions": [],
@@ -216,13 +228,14 @@ def analyze_possession_tempo(events: Iterable[dict[str, Any]] | None = None) -> 
     return {
         "summary": summary,
         "metrics": {
-            "event_count": len(event_list),
+            "event_count": team_event_count,
             "possession_count": possession_count,
             "avg_sequence_length": round(avg_sequence_length, 2),
             "avg_possession_duration": round(avg_possession_duration, 2),
             "transition_speed": round(transition_speed, 3),
             "progression_rate": round(progression_rate, 2),
             "dominant_team": dominant_team,
+            "focus_team": focus_team or dominant_team,
         },
         "team_breakdown": team_breakdown,
         "possessions": possession_rows[:15],

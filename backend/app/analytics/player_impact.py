@@ -99,7 +99,10 @@ def _shot_xg(event: dict[str, Any]) -> float:
     return 0.0
 
 
-def analyze_player_impact(events: Iterable[dict[str, Any]] | None = None) -> dict[str, Any]:
+def analyze_player_impact(
+    events: Iterable[dict[str, Any]] | None = None,
+    focus_team: str | None = None,
+) -> dict[str, Any]:
     event_list = list(events or [])
 
     player_stats: dict[str, dict[str, Any]] = defaultdict(
@@ -125,7 +128,7 @@ def analyze_player_impact(events: Iterable[dict[str, Any]] | None = None) -> dic
     for event in event_list:
         player = _player_name(event)
         team = _team_name(event)
-        if not player or not team:
+        if not player or not team or (focus_team and team != focus_team):
             continue
 
         stats = player_stats[player]
@@ -156,14 +159,19 @@ def analyze_player_impact(events: Iterable[dict[str, Any]] | None = None) -> dic
 
     if not player_stats:
         return {
-            "summary": "No player actions with usable names were available.",
+            "summary": (
+                f"No player actions with usable names were available for {focus_team}."
+                if focus_team
+                else "No player actions with usable names were available."
+            ),
             "metrics": {
-                "event_count": len(event_list),
+                "event_count": 0,
                 "xg_contribution": 0.0,
                 "key_passes": 0,
                 "possession_share": 0.0,
                 "shot_count": 0,
                 "assist_count": 0,
+                "focus_team": focus_team or "",
             },
             "players": [],
             "team_breakdown": [],
@@ -228,13 +236,14 @@ def analyze_player_impact(events: Iterable[dict[str, Any]] | None = None) -> dic
     return {
         "summary": summary,
         "metrics": {
-            "event_count": len(event_list),
+            "event_count": total_actions,
             "xg_contribution": round(total_xg, 3),
             "key_passes": total_key_passes,
             "possession_share": round(top_player["possession_share"], 3),
             "shot_count": total_shots,
             "assist_count": sum(player["assists"] for player in players),
             "player_count": len(players),
+            "focus_team": focus_team or top_team,
         },
         "players": players[:10],
         "team_breakdown": team_breakdown,

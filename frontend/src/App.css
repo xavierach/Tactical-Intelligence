@@ -502,6 +502,151 @@
   gap: 14px;
 }
 
+.network-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.network-summary {
+  margin: 0;
+  color: rgba(247, 242, 234, 0.78);
+  line-height: 1.55;
+}
+
+.network-svg {
+  width: 100%;
+  height: 320px;
+  display: block;
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 50% 45%, rgba(245, 184, 74, 0.08), transparent 42%),
+    linear-gradient(180deg, rgba(10, 18, 30, 0.98), rgba(12, 21, 35, 0.98));
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.spacing-svg {
+  width: 100%;
+  height: 320px;
+  display: block;
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 50% 45%, rgba(82, 194, 133, 0.08), transparent 42%),
+    linear-gradient(180deg, rgba(8, 18, 28, 0.98), rgba(11, 20, 33, 0.98));
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.spacing-callouts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.spacing-callouts span {
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(247, 242, 234, 0.86);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+}
+
+.pitch-surface {
+  fill: rgba(18, 39, 24, 0.96);
+  stroke: rgba(255, 255, 255, 0.12);
+  stroke-width: 0.6;
+}
+
+.pitch-surface-alt {
+  fill: rgba(21, 34, 50, 0.96);
+}
+
+.pitch-line,
+.pitch-circle,
+.pitch-box {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.22);
+  stroke-width: 0.7;
+}
+
+.network-edge {
+  stroke: url(#edgeGradient);
+  stroke-linecap: round;
+  opacity: 0.48;
+}
+
+.network-node text {
+  fill: rgba(247, 242, 234, 0.86);
+  font-size: 2.3px;
+  letter-spacing: 0.02em;
+}
+
+.network-node-core {
+  fill: #f5b84a;
+  stroke: rgba(255, 255, 255, 0.92);
+  stroke-width: 0.8;
+}
+
+.network-node-shell {
+  fill: rgba(16, 26, 43, 0.98);
+  stroke: rgba(245, 184, 74, 0.45);
+  stroke-width: 0.5;
+}
+
+.network-node.central text {
+  font-weight: 700;
+}
+
+.spacing-point {
+  fill: rgba(247, 115, 81, 0.9);
+  stroke: rgba(255, 255, 255, 0.88);
+  stroke-width: 0.4;
+}
+
+.spacing-centroid {
+  fill: rgba(245, 184, 74, 0.95);
+  stroke: rgba(255, 255, 255, 0.95);
+  stroke-width: 0.5;
+}
+
+.spacing-gap-x {
+  fill: rgba(245, 184, 74, 0.12);
+}
+
+.spacing-gap-y {
+  fill: rgba(82, 194, 133, 0.12);
+}
+
+.spacing-heat-cell {
+  fill: rgba(255, 127, 80, 0.95);
+  stroke: rgba(255, 255, 255, 0.1);
+  stroke-width: 0.15;
+}
+
+.spacing-hot-zone {
+  fill: none;
+  stroke: rgba(255, 227, 153, 0.9);
+  stroke-width: 0.8;
+  stroke-dasharray: 2 1.5;
+}
+
+.network-meta {
+  display: grid;
+  gap: 12px;
+}
+
+.network-meta strong {
+  color: #fff;
+  line-height: 1.5;
+}
+
+.network-connection-list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+  color: rgba(247, 242, 234, 0.8);
+}
+
 .subpanel li {
   display: grid;
   gap: 4px;
@@ -541,6 +686,18 @@
   }
 
   .summary-overview-header {
+    flex-direction: column;
+  }
+
+  .network-svg {
+    height: 260px;
+  }
+
+  .spacing-svg {
+    height: 260px;
+  }
+
+  .spacing-callouts {
     flex-direction: column;
   }
 }
