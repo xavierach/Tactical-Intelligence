@@ -6,6 +6,8 @@ networkx==3.6.1
 numpy==2.4.4
 pandas==3.0.2
 python-dotenv==1.2.2
+torch>=2.2.0
+transformers>=4.45.0
 seaborn==0.13.2
 SQLAlchemy==2.0.49
 statsbombpy==1.18.0

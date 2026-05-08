@@ -35,6 +35,10 @@ Useful endpoints:
 - `GET /api/matches`
 - `POST /api/reports/generate`
 
+To enable the Qwen-backed report text, install the backend requirements and set
+`QWEN_MODEL_NAME` if you want a different model. The default is
+`Qwen/Qwen2.5-0.5B-Instruct`.
+
 ## Run the React UI
 
 ```bash

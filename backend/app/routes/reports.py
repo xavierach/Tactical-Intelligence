@@ -15,6 +15,13 @@ def generate_report() -> tuple[dict[str, object], int]:
     if not match_id:
         return {"error": "match_id is required"}, 400
 
+    focus_team = str(
+        payload.get("focus_team")
+        or match_payload.get("focus_team")
+        or match_payload.get("home_team")
+        or "Home Team"
+    )
+
     match = MatchContext(
         match_id=match_id,
         competition=str(
@@ -25,6 +32,7 @@ def generate_report() -> tuple[dict[str, object], int]:
         season=str(match_payload.get("season_name") or match_payload.get("season") or ""),
         home_team=str(match_payload.get("home_team") or "Home Team"),
         away_team=str(match_payload.get("away_team") or "Away Team"),
+        focus_team=focus_team,
         kickoff=str(match_payload.get("match_date") or match_payload.get("kick_off") or ""),
         venue=payload.get("venue"),
     )

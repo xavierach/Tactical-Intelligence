@@ -11,6 +11,7 @@ class MatchContext:
     season: str = "Open Data"
     home_team: str = "Home Team"
     away_team: str = "Away Team"
+    focus_team: str | None = None
     kickoff: str | None = None
     venue: str | None = None
 
@@ -33,6 +34,8 @@ class TacticalReport:
     match: MatchContext
     sections: list[ReportSection]
     analytics: dict[str, Any]
+    summary: dict[str, Any] = field(default_factory=dict)
+    insights: list[dict[str, Any]] = field(default_factory=list)
     visualisations: list[dict[str, Any]] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
 
@@ -41,6 +44,8 @@ class TacticalReport:
             "match": self.match.to_dict(),
             "sections": [section.to_dict() for section in self.sections],
             "analytics": self.analytics,
+            "summary": self.summary,
+            "insights": self.insights,
             "visualisations": self.visualisations,
             "notes": self.notes,
         }

@@ -21,15 +21,65 @@ type Match = {
   kick_off?: string
 }
 
-type Report = {
+  type Report = {
   match: {
     match_id: number | string
     competition: string
     season: string
     home_team: string
     away_team: string
+    focus_team?: string | null
     kickoff?: string | null
     venue?: string | null
+  }
+  summary: {
+    match: {
+      match_id: number | string
+      competition: string
+      season: string
+      home_team: string
+      away_team: string
+      focus_team?: string | null
+      kickoff?: string | null
+      venue?: string | null
+    }
+    attacking: {
+      headline: string
+      metrics: Record<string, number | string | boolean | null>
+      central_players?: string[]
+      top_connections?: Array<{
+        source: string
+        target: string
+        weight: number
+      }>
+      summary: string
+    }
+    defensive: {
+      headline: string
+      metrics: Record<string, number | string | boolean | null>
+      dominant_team?: string
+      team_breakdown?: Array<Record<string, unknown>>
+      gaps?: Array<Record<string, unknown>>
+      summary: string
+    }
+    players: {
+      headline: string
+      metrics: Record<string, number | string | boolean | null>
+      top_player?: Record<string, unknown>
+      players?: Array<Record<string, unknown>>
+      summary: string
+    }
+    tempo: {
+      headline: string
+      metrics: Record<string, number | string | boolean | null>
+      dominant_team?: string
+      team_breakdown?: Array<Record<string, unknown>>
+      possessions?: Array<Record<string, unknown>>
+      summary: string
+    }
+    themes: string[]
+    evidence: string[]
+    confidence: string
   }
   sections: Array<{
     title: string
@@ -37,6 +87,14 @@ type Report = {
     bullets: string[]
   }>
   analytics: Record<string, unknown>
+  insights: Array<{
+    section: string
+    headline: string
+    evidence: string[]
+    implication: string
+    recommendation: string
+    confidence: string
+  }>
   visualisations: Array<{
     id: string
     title: string
@@ -73,6 +131,7 @@ function App() {
   const [selectedCompetitionKey, setSelectedCompetitionKey] = useState('')
   const [matches, setMatches] = useState<Match[]>([])
   const [selectedMatchId, setSelectedMatchId] = useState('')
+  const [selectedReportTeam, setSelectedReportTeam] = useState('')
   const [report, setReport] = useState<Report | null>(null)
   const [loadingCompetitions, setLoadingCompetitions] = useState(true)
   const [loadingMatches, setLoadingMatches] = useState(false)
@@ -88,6 +147,20 @@ function App() {
     () => matches.find((match) => String(match.match_id) === selectedMatchId),
     [matches, selectedMatchId],
   )
+
+  useEffect(() => {
+    if (!selectedMatch) {
+      setSelectedReportTeam('')
+      return
+    }
+
+    setSelectedReportTeam((currentTeam) => {
+      if (currentTeam === selectedMatch.home_team || currentTeam === selectedMatch.away_team) {
+        return currentTeam
+      }
+      return selectedMatch.home_team
+    })
+  }, [selectedMatch])
 
   useEffect(() => {
     let cancelled = false
@@ -195,6 +268,7 @@ function App() {
         },
         body: JSON.stringify({
           match: selectedMatch,
+          focus_team: selectedReportTeam || selectedMatch.home_team,
         }),
       })
 
@@ -215,8 +289,34 @@ function App() {
   }
 
   const reportSections = report?.sections ?? []
-  const analyticsEntries = Object.entries(report?.analytics ?? {})
+  const summary = report?.summary
+  const insights = report?.insights ?? []
   const narrativeNotes = report?.notes ?? []
+  const reportFocusTeam = selectedReportTeam || selectedMatch?.home_team || 'Home Team'
+  const summaryCards = summary
+    ? [
+        {
+          key: 'attacking',
+          title: 'Attacking Structure',
+          payload: summary.attacking,
+        },
+        {
+          key: 'defensive',
+          title: 'Defensive Shape',
+          payload: summary.defensive,
+        },
+        {
+          key: 'players',
+          title: 'Player Impact',
+          payload: summary.players,
+        },
+        {
+          key: 'tempo',
+          title: 'Tempo Profile',
+          payload: summary.tempo,
+        },
+      ]
+    : []
 
   return (
     <main className="app-shell">
@@ -284,6 +384,23 @@ function App() {
             </select>
           </div>
 
+          <div className="control-group">
+            <label htmlFor="report-team">Report team</label>
+            <select
+              id="report-team"
+              value={selectedReportTeam}
+              onChange={(event) => setSelectedReportTeam(event.target.value)}
+              disabled={!selectedMatch}
+            >
+              {selectedMatch ? (
+                <>
+                  <option value={selectedMatch.home_team}>{selectedMatch.home_team}</option>
+                  <option value={selectedMatch.away_team}>{selectedMatch.away_team}</option>
+                </>
+              ) : null}
+            </select>
+          </div>
+
           <button
             type="button"
             className="primary-button"
@@ -329,6 +446,10 @@ function App() {
                 <span className="label">Match date</span>
                 <strong>{selectedMatch.match_date || selectedMatch.kick_off || 'Unknown'}</strong>
               </div>
+              <div>
+                <span className="label">Report focus</span>
+                <strong>{reportFocusTeam}</strong>
+              </div>
             </div>
           ) : (
             <p className="empty-state">Choose a match to build the report.</p>
@@ -337,23 +458,135 @@ function App() {
 
         <article className="panel">
           <div className="panel-heading">
-            <h2>Analytics Snapshot</h2>
-            <p>Structured metrics passed to the LLM layer.</p>
+            <h2>Match Summary</h2>
+            <p>Backend-built summary contract passed to the LLM layer.</p>
           </div>
 
-          <div className="metrics-grid">
-            {analyticsEntries.length > 0 ? (
-              analyticsEntries.map(([key, value]) => (
-                <div key={key} className="metric-card">
-                  <span className="metric-label">{key.replaceAll('_', ' ')}</span>
-                  <pre>{JSON.stringify(value, null, 2)}</pre>
+          {summary ? (
+            <div className="summary-stack">
+              <div className="summary-overview">
+                  <div className="summary-overview-header">
+                  <div>
+                    <span className="label">LLM contract</span>
+                    <h3>
+                      {summary.match.home_team} vs {summary.match.away_team}
+                    </h3>
+                  </div>
+                  <span className={`confidence-pill confidence-${summary.confidence}`}>
+                    {summary.confidence} confidence
+                  </span>
                 </div>
-              ))
-            ) : (
-              <p className="empty-state">Run a report to see passing, defensive, player, and tempo outputs.</p>
-            )}
-          </div>
+
+                <div className="summary-match-grid">
+                  <div>
+                    <span className="label">Competition</span>
+                    <strong>{summary.match.competition}</strong>
+                  </div>
+                  <div>
+                    <span className="label">Season</span>
+                    <strong>{summary.match.season}</strong>
+                  </div>
+                  <div>
+                    <span className="label">Fixture</span>
+                    <strong>
+                      {summary.match.home_team} vs {summary.match.away_team}
+                    </strong>
+                  </div>
+                  <div>
+                    <span className="label">Kickoff</span>
+                    <strong>{summary.match.kickoff || 'Unknown'}</strong>
+                  </div>
+                  <div>
+                    <span className="label">Focus team</span>
+                    <strong>{summary.match.focus_team || 'Home Team'}</strong>
+                  </div>
+                </div>
+              </div>
+
+              <div className="summary-card-grid">
+                {summaryCards.map(({ key, title, payload }) => (
+                  <article key={key} className="summary-card">
+                    <div className="summary-card-header">
+                      <span className="metric-label">{title}</span>
+                      <strong>{payload.headline}</strong>
+                    </div>
+                    <p className="summary-copy">{payload.summary}</p>
+                  </article>
+                ))}
+              </div>
+
+              <div className="summary-panels">
+                <article className="summary-panel">
+                  <h3>Themes</h3>
+                  {summary.themes.length > 0 ? (
+                    <div className="theme-list">
+                      {summary.themes.map((theme) => (
+                        <span key={theme} className="theme-chip">
+                          {theme}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="empty-state">No themes were generated for this report.</p>
+                  )}
+                </article>
+
+                <article className="summary-panel">
+                  <h3>Overview</h3>
+                  <ul className="overview-list">
+                    <li>Focus team: {summary.match.focus_team || summary.match.home_team}</li>
+                    <li>Competition: {summary.match.competition}</li>
+                    <li>Season: {summary.match.season}</li>
+                    <li>{summary.match.home_team} vs {summary.match.away_team}</li>
+                  </ul>
+                  <p className="summary-note">
+                    Use the actionable insights section below for the detailed evidence and tactical reasoning.
+                  </p>
+                </article>
+              </div>
+            </div>
+          ) : (
+            <p className="empty-state">
+              Run a report to see the backend summary, themes, evidence, and confidence.
+            </p>
+          )}
         </article>
+      </section>
+
+      <section className="panel">
+        <div className="panel-heading">
+          <h2>Actionable Insights</h2>
+          <p>Claim, evidence, implication, and recommendation for the LLM.</p>
+        </div>
+
+        {insights.length > 0 ? (
+          <div className="insight-grid">
+            {insights.map((insight) => (
+              <article key={`${insight.section}:${insight.headline}`} className="insight-card">
+                <div className="insight-header">
+                  <span>{insight.section}</span>
+                  <strong>{insight.confidence} confidence</strong>
+                </div>
+                <h3>{insight.headline}</h3>
+                <p>{insight.implication}</p>
+                <div className="insight-block">
+                  <span>Evidence</span>
+                  <ul>
+                    {insight.evidence.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="insight-block">
+                  <span>Recommendation</span>
+                  <p>{insight.recommendation}</p>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p className="empty-state">Generate a report to see LLM-ready tactical insights.</p>
+        )}
       </section>
 
       <section className="panel">
