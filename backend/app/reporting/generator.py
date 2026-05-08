@@ -36,42 +36,64 @@ def generate_tactical_report(
     insights = build_actionable_insights(summary_dict)
     llm_payload = build_llm_insight_payload(summary_dict)
 
+    match_block = summary_dict.get("match", {})
+    attacking_summary = summary_dict.get("attacking", {})
+    defensive_summary = summary_dict.get("defensive", {})
+    players_summary = summary_dict.get("players", {})
+    tempo_summary = summary_dict.get("tempo", {})
+    themes = summary_dict.get("themes", [])
+    evidence = summary_dict.get("evidence", [])
+
     sections = [
         ReportSection(
             title="Match Overview",
             summary=(
                 f"Selected team: {focus_team}. "
-                f"{summary_dict.get('themes', ['High-level fixture context.'])[0]}"
+                f"{themes[0] if themes else 'High-level fixture context.'}"
             ),
             bullets=[
-                f"Competition: {match.competition}",
-                f"Season: {match.season}",
-                f"Report focus: {focus_team}",
-                "This overview now reflects the selected team only.",
+                f"Competition: {match_block.get('competition', match.competition)}",
+                f"Season: {match_block.get('season', match.season)}",
+                f"Report focus: {match_block.get('focus_team', focus_team)}",
+                f"Confidence: {summary_dict.get('confidence', 'medium')}",
             ],
         ),
         ReportSection(
             title="Attacking Analysis",
-            summary="How the team progressed the ball and created chances.",
+            summary=attacking_summary.get("summary", "How the team progressed the ball and created chances."),
             bullets=[
-                f"Summarise buildup structure and overloads for {focus_team}.",
-                f"Highlight central playmakers and key passing lanes used by {focus_team}.",
+                attacking_summary.get("headline", f"{focus_team} built through central combinations."),
+                f"Central players: {', '.join(attacking_summary.get('central_players', [])[:3]) or 'None identified'}",
+                f"Top connection count: {len(attacking_summary.get('top_connections', []))}",
             ],
         ),
         ReportSection(
             title="Defensive Analysis",
-            summary="How the team defended space, shape, and transitions.",
+            summary=defensive_summary.get("summary", "How the team defended space, shape, and transitions."),
             bullets=[
-                f"Describe spacing, compactness, and defensive line behaviour for {focus_team}.",
-                f"Identify vulnerable zones and repeated exposure patterns around {focus_team}.",
+                defensive_summary.get("headline", f"{focus_team} showed a defensive spacing pattern."),
+                f"Compactness: {defensive_summary.get('metrics', {}).get('compactness', 0):.2f}",
+                f"Line stretch: {defensive_summary.get('metrics', {}).get('line_stretch', 0):.2f}",
+                f"Spacing gaps analysed: {len(defensive_summary.get('gaps', []))}",
             ],
         ),
         ReportSection(
             title="Key Players",
-            summary="The players who most influenced the match story.",
+            summary=players_summary.get("summary", "The players who most influenced the match story."),
             bullets=[
-                f"Rank players by impact, involvement, and tactical importance for {focus_team}.",
-                f"Call out the players that shaped possession and pressing phases for {focus_team}.",
+                players_summary.get("headline", "No single player clearly dominated."),
+                f"Top player: {(players_summary.get('top_player', {}) or {}).get('name', 'None identified')}",
+                f"xG contribution: {players_summary.get('metrics', {}).get('xg_contribution', 0):.2f}",
+            ],
+        ),
+        ReportSection(
+            title="Tempo and Transitions",
+            summary=tempo_summary.get("summary", "How the team controlled or accelerated possession."),
+            bullets=[
+                tempo_summary.get("headline", f"{focus_team} showed a mixed tempo profile."),
+                f"Possessions: {tempo_summary.get('metrics', {}).get('possession_count', 0)}",
+                f"Average sequence length: {tempo_summary.get('metrics', {}).get('avg_sequence_length', 0):.2f}",
+                f"Transition speed: {tempo_summary.get('metrics', {}).get('transition_speed', 0):.2f}",
             ],
         ),
     ]
@@ -92,7 +114,7 @@ def generate_tactical_report(
     notes = [
         generate_tactical_insight(llm_payload),
         f"Prepared {len(insights)} structured insights from {len(summary_dict.get('themes', []))} themes.",
-        "The prompt is reduced to match_summary, themes, and evidence only.",
+        f"Evidence count available to the backend summary: {len(evidence)}.",
         f"Report focus team: {focus_team}.",
     ]
 
