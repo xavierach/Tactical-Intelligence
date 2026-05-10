@@ -630,6 +630,90 @@
   letter-spacing: 0.04em;
 }
 
+.flank-breakdown {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.flank-breakdown-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+}
+
+.flank-breakdown-note {
+  color: rgba(247, 242, 234, 0.7);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+}
+
+.flank-bars {
+  display: grid;
+  gap: 10px;
+}
+
+.flank-bar-row {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr) 44px;
+  gap: 10px;
+  align-items: center;
+}
+
+.flank-bar-label {
+  display: grid;
+  gap: 4px;
+}
+
+.flank-bar-label strong {
+  color: #fff;
+  font-size: 0.84rem;
+  text-transform: capitalize;
+}
+
+.flank-bar-label span,
+.flank-bar-share {
+  color: rgba(247, 242, 234, 0.7);
+  font-size: 0.76rem;
+}
+
+.flank-bar-track {
+  position: relative;
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.flank-bar-fill {
+  height: 100%;
+  border-radius: inherit;
+  box-shadow: 0 0 18px rgba(245, 184, 74, 0.18);
+}
+
+.flank-left {
+  background: linear-gradient(90deg, rgba(239, 125, 87, 0.9), rgba(251, 146, 60, 0.9));
+}
+
+.flank-center {
+  background: linear-gradient(90deg, rgba(245, 184, 74, 0.9), rgba(250, 204, 21, 0.9));
+}
+
+.flank-right {
+  background: linear-gradient(90deg, rgba(45, 212, 191, 0.9), rgba(15, 118, 110, 0.9));
+}
+
+.flank-defensive_third,
+.flank-middle_third,
+.flank-attacking_third,
+.flank-zone {
+  background: linear-gradient(90deg, rgba(245, 184, 74, 0.9), rgba(239, 125, 87, 0.9));
+}
+
 .pitch-surface {
   fill: rgba(18, 39, 24, 0.96);
   stroke: rgba(255, 255, 255, 0.12);

@@ -49,6 +49,13 @@ export type Report = {
         target: string
         weight: number
       }>
+      routes?: Array<Record<string, unknown>>
+      best_route?: Record<string, unknown>
+      route_summary?: string
+      sequence_breakdown?: Array<Record<string, unknown>>
+      best_sequence?: Record<string, unknown>
+      sequence_examples?: Array<Record<string, unknown>>
+      sequence_summary?: string
       summary: string
     }
     defensive: {
@@ -56,6 +63,9 @@ export type Report = {
       metrics: Record<string, number | string | boolean | null>
       dominant_team?: string
       team_breakdown?: Array<Record<string, unknown>>
+      flank_breakdown?: Array<Record<string, unknown>>
+      zone_breakdown?: Array<Record<string, unknown>>
+      flank_pressure_gaps?: Array<Record<string, unknown>>
       gaps?: Array<Record<string, unknown>>
       summary: string
     }
@@ -159,6 +169,27 @@ export type DefensiveSpacingData = {
   metrics?: Record<string, number | string>
   team_breakdown?: Array<{
     team: string
+    defensive_actions: number
+    share: number
+  }>
+  flank_breakdown?: Array<{
+    flank?: string
+    third?: string
+    zone?: string
+    defensive_actions: number
+    share: number
+    centroid_x?: number
+    centroid_y?: number
+  }>
+  zone_breakdown?: Array<{
+    third?: string
+    defensive_actions: number
+    share: number
+    centroid_x?: number
+    centroid_y?: number
+  }>
+  flank_pressure_gaps?: Array<{
+    flank: string
     defensive_actions: number
     share: number
   }>

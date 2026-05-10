@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from typing import Any, Iterable
 
+from ..analytics.attacking_route import analyze_attacking_routes
 from ..analytics.defensive_spacing import analyze_defensive_spacing
+from ..analytics.sequence_classifier import analyze_possession_sequences
 from ..analytics.passing_network import analyze_passing_network
 from ..analytics.player_impact import analyze_player_impact
 from ..analytics.tempo import analyze_possession_tempo
@@ -22,6 +24,12 @@ def generate_tactical_report(
     lineups = load_match_lineups(match.match_id)
 
     analytics = {
+        "attacking_routes": analyze_attacking_routes(
+            event_list,
+            focus_team=focus_team,
+            lineups=lineups,
+        ),
+        "sequence_patterns": analyze_possession_sequences(event_list, focus_team=focus_team),
         "passing_network": analyze_passing_network(
             event_list,
             focus_team=focus_team,
@@ -64,6 +72,15 @@ def generate_tactical_report(
             bullets=[
                 attacking_summary.get("headline", f"{focus_team} built through central combinations."),
                 f"Central players: {', '.join(attacking_summary.get('central_players', [])[:3]) or 'None identified'}",
+                (
+                    f"Best route: {attacking_summary.get('best_route', {}).get('label', 'None identified')} "
+                    f"({attacking_summary.get('best_route', {}).get('box_entries', 0)} box entries, "
+                    f"{attacking_summary.get('best_route', {}).get('xg', 0):.2f} xG)"
+                ),
+                (
+                    f"Best sequence: {attacking_summary.get('best_sequence', {}).get('sequence_label', 'None identified')} "
+                    f"({attacking_summary.get('best_sequence', {}).get('xg', 0):.2f} xG)"
+                ),
                 f"Top connection count: {len(attacking_summary.get('top_connections', []))}",
             ],
         ),
@@ -74,6 +91,11 @@ def generate_tactical_report(
                 defensive_summary.get("headline", f"{focus_team} showed a defensive spacing pattern."),
                 f"Compactness: {defensive_summary.get('metrics', {}).get('compactness', 0):.2f}",
                 f"Line stretch: {defensive_summary.get('metrics', {}).get('line_stretch', 0):.2f}",
+                (
+                    f"Strongest flank: {defensive_summary.get('flank_breakdown', [{}])[0].get('flank', 'None identified')}"
+                    if defensive_summary.get("flank_breakdown")
+                    else "Strongest flank: None identified"
+                ),
                 f"Spacing gaps analysed: {len(defensive_summary.get('gaps', []))}",
             ],
         ),

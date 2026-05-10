@@ -175,6 +175,38 @@ export function TacticalReportPanel({ report, reportSections, insights, narrativ
                     <span>Compactness {defensiveSpacing.compactness.toFixed(2)}</span>
                     <span>Stretch {defensiveSpacing.lineStretch.toFixed(2)}</span>
                   </div>
+                  {defensiveSpacing.flankBreakdown ? (
+                    <div className="flank-breakdown">
+                      <div className="flank-breakdown-header">
+                        <span className="label">Flank pressure balance</span>
+                        <span className="flank-breakdown-note">
+                          Left / center / right action share
+                        </span>
+                      </div>
+                      <div className="flank-bars" role="img" aria-label="Flank pressure balance">
+                        {defensiveSpacing.flankBreakdown
+                          .slice()
+                          .sort((a, b) => (a.share ?? 0) - (b.share ?? 0))
+                          .map((flank) => (
+                            <div className="flank-bar-row" key={String(flank.flank ?? flank.third ?? flank.zone)}>
+                              <div className="flank-bar-label">
+                                <strong>{String(flank.flank ?? flank.third ?? flank.zone ?? 'Zone')}</strong>
+                                <span>{Number(flank.defensive_actions ?? 0)} actions</span>
+                              </div>
+                              <div className="flank-bar-track">
+                                <div
+                                  className={`flank-bar-fill flank-${String(flank.flank ?? flank.third ?? flank.zone ?? 'zone')}`}
+                                  style={{ width: `${Math.max(8, Math.round((Number(flank.share ?? 0) || 0) * 100))}%` }}
+                                />
+                              </div>
+                              <span className="flank-bar-share">
+                                {Math.round((Number(flank.share ?? 0) || 0) * 100)}%
+                              </span>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  ) : null}
                   <svg
                     className="spacing-svg"
                     viewBox="0 0 120 80"
@@ -257,6 +289,18 @@ export function TacticalReportPanel({ report, reportSections, insights, narrativ
                         ))}
                       </ul>
                     </div>
+                    {defensiveSpacing.flankBreakdown ? (
+                      <div>
+                        <span className="label">Flank pressure</span>
+                        <ul className="network-connection-list">
+                        {defensiveSpacing.flankBreakdown.slice(0, 3).map((flank, index) => (
+                          <li key={`flank-${index}`}>
+                            {String(flank.flank ?? flank.third ?? flank.zone)}: {Number(flank.defensive_actions ?? 0)} actions
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
                   </div>
                 </div>
               ) : (

@@ -38,6 +38,9 @@ export type DefensiveSpacingLayout = {
   compactness: number
   lineStretch: number
   teamBreakdown: DefensiveSpacingData['team_breakdown']
+  flankBreakdown: NonNullable<DefensiveSpacingData['flank_breakdown']>
+  zoneBreakdown: NonNullable<DefensiveSpacingData['zone_breakdown']>
+  flankPressureGaps: NonNullable<DefensiveSpacingData['flank_pressure_gaps']>
   totalActions: number
   heatmap: DefensiveSpacingHeatCell[]
   hotZones: Array<{
@@ -212,6 +215,9 @@ export function buildDefensiveSpacingLayout(data: DefensiveSpacingData | undefin
     compactness,
     lineStretch,
     teamBreakdown: data.team_breakdown ?? [],
+    flankBreakdown: data.flank_breakdown ?? [],
+    zoneBreakdown: data.zone_breakdown ?? [],
+    flankPressureGaps: data.flank_pressure_gaps ?? [],
     totalActions: maxActions,
     heatmap,
     hotZones,
