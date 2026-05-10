@@ -34,7 +34,7 @@ def generate_tactical_report(
     match_summary = build_match_summary(match.to_dict(), analytics)
     summary_dict = match_summary.to_dict()
     insights = build_actionable_insights(summary_dict)
-    llm_payload = build_llm_insight_payload(summary_dict)
+    llm_payload = build_llm_insight_payload(summary_dict, insights)
 
     match_block = summary_dict.get("match", {})
     attacking_summary = summary_dict.get("attacking", {})

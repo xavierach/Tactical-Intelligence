@@ -90,6 +90,9 @@ export type Report = {
     evidence: string[]
     implication: string
     recommendation: string
+    why_it_helps: string
+    how_to_apply: string
+    expected_result: string
     confidence: string
   }>
   visualisations: Array<{
@@ -163,4 +166,3 @@ export type DefensiveSpacingData = {
   actions?: DefensiveSpacingAction[]
   notes?: string[]
 }
-

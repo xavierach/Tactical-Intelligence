@@ -2,6 +2,7 @@ import type { DefensiveSpacingData, PassingNetworkData, Report } from '../types'
 import {
   buildDefensiveSpacingLayout,
   buildPassingNetworkLayout,
+  formatPlayerLastName,
   formatSpacingZone,
 } from '../utils/visualisations'
 
@@ -17,6 +18,16 @@ export function TacticalReportPanel({ report, reportSections, insights, narrativ
   const defensiveSpacing = buildDefensiveSpacingLayout(
     report?.analytics?.defensive_spacing as DefensiveSpacingData | undefined,
   )
+  const insightSectionMap = {
+    'Match Overview': 'match',
+    'Attacking Analysis': 'attacking',
+    'Defensive Analysis': 'defensive',
+    'Key Players': 'players',
+    'Tempo and Transitions': 'tempo',
+  } as const
+
+  const getInsightsForSection = (title: keyof typeof insightSectionMap) =>
+    insights.filter((insight) => insight.section === insightSectionMap[title])
 
   return (
     <section className="panel">
@@ -28,17 +39,50 @@ export function TacticalReportPanel({ report, reportSections, insights, narrativ
       {reportSections.length > 0 ? (
         <div className="report-layout">
           <div className="report-sections">
-            {reportSections.map((section) => (
-              <article key={section.title} className="report-card">
-                <h3>{section.title}</h3>
-                <p>{section.summary}</p>
-                <ul>
-                  {section.bullets.map((bullet) => (
-                    <li key={bullet}>{bullet}</li>
-                  ))}
-                </ul>
-              </article>
-            ))}
+            {reportSections.map((section) => {
+              const sectionInsights = getInsightsForSection(section.title as keyof typeof insightSectionMap)
+              return (
+                <article key={section.title} className="report-card">
+                  <h3>{section.title}</h3>
+                  <p>{section.summary}</p>
+                  <ul>
+                    {section.bullets.map((bullet) => (
+                      <li key={bullet}>{bullet}</li>
+                    ))}
+                  </ul>
+
+                  {sectionInsights.length > 0 && section.title !== 'Match Overview' ? (
+                    <div className="report-card-insight-group">
+                      <span className="report-card-insight-heading">Recommendations</span>
+                      <ul className="insight-list">
+                        {sectionInsights.map((insight) => (
+                          <li key={`${insight.section}:${insight.headline}`}>
+                            <strong>{insight.headline}</strong>
+                            <span>{insight.implication}</span>
+                            <div className="insight-callout">
+                              <span className="insight-label">Recommendation</span>
+                              <p>{insight.recommendation}</p>
+                            </div>
+                            <div className="insight-callout">
+                              <span className="insight-label">Why it helps</span>
+                              <p>{insight.why_it_helps}</p>
+                            </div>
+                            <div className="insight-callout">
+                              <span className="insight-label">How to apply</span>
+                              <p>{insight.how_to_apply}</p>
+                            </div>
+                            <div className="insight-callout">
+                              <span className="insight-label">Expected result</span>
+                              <p>{insight.expected_result}</p>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+                </article>
+              )
+            })}
           </div>
 
           <aside className="report-sidebar">
@@ -83,7 +127,7 @@ export function TacticalReportPanel({ report, reportSections, insights, narrativ
                           className={node.isCentral ? 'network-node-core' : 'network-node-shell'}
                         />
                         <text x={node.x} y={node.y + node.radius + 3} textAnchor="middle">
-                          {node.display_name || node.position_abbr || node.name}
+                          {formatPlayerLastName(node.name) || node.display_name || node.position_abbr || node.name}
                         </text>
                         <title>{node.name}</title>
                       </g>
@@ -240,25 +284,6 @@ export function TacticalReportPanel({ report, reportSections, insights, narrativ
                 ))}
               </ul>
             </div>
-
-            <div className="subpanel">
-              <h3>Insight Additions</h3>
-              {insights.length > 0 ? (
-                <ul className="insight-list">
-                  {insights.map((insight) => (
-                    <li key={`${insight.section}:${insight.headline}`}>
-                      <strong>
-                        {insight.section} · {insight.headline}
-                      </strong>
-                      <span>{insight.implication}</span>
-                      <em>{insight.recommendation}</em>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="empty-state">Generate a report to see tactical insight additions.</p>
-              )}
-            </div>
           </aside>
         </div>
       ) : (
@@ -269,4 +294,3 @@ export function TacticalReportPanel({ report, reportSections, insights, narrativ
     </section>
   )
 }
-

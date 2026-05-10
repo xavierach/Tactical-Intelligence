@@ -57,6 +57,16 @@ export function formatSpacingZone(cell: { x: number; y: number; width: number; h
   return `Zone ${xStart}-${xEnd} / ${yStart}-${yEnd}`
 }
 
+export function formatPlayerLastName(fullName: string) {
+  const trimmed = fullName.trim()
+  if (!trimmed) {
+    return ''
+  }
+
+  const parts = trimmed.split(/\s+/)
+  return parts[parts.length - 1]
+}
+
 export function buildPassingNetworkLayout(network: PassingNetworkData | undefined | null) {
   if (!network?.nodes?.length || !network?.edges?.length) {
     return null
@@ -207,4 +217,3 @@ export function buildDefensiveSpacingLayout(data: DefensiveSpacingData | undefin
     hotZones,
   }
 }
-
